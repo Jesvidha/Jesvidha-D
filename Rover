@@ -1,0 +1,159 @@
+#include <BluetoothSerial.h>
+#include <Servo.h>
+BluetoothSerial BLE;
+Servo myservo;
+
+// Ultrasonic pins
+#define TRIG 5
+#define ECHO 18
+
+// Motor pins (L298N)
+#define ENA 14
+#define IN1 27
+#define IN2 26
+#define IN3 25
+#define IN4 33
+#define ENB 32
+
+long duration;
+int distance;
+
+int getDistance() {
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  duration = pulseIn(ECHO, HIGH);
+  distance = duration * 0.034 / 2;
+  return distance;
+}
+
+void forward() {
+
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+
+  analogWrite(ENA, 200);
+  analogWrite(ENB, 200);
+}
+
+void backward() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+
+  analogWrite(ENA, 200);
+  analogWrite(ENB, 200);
+}
+
+void leftTurn() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+
+  analogWrite(ENA, 200);
+  analogWrite(ENB, 200);
+}
+
+void rightTurn() {
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+
+  analogWrite(ENA, 200);
+  analogWrite(ENB, 200);
+}
+
+void stopBot() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+}
+
+void setup() {
+  Serial.begin(115200);
+  BLE.begin("J_ROVER");
+
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(ENA, OUTPUT);
+  pinMode(ENB, OUTPUT);
+
+  myservo.attach(4); // Servo PIN
+  myservo.write(90); // middle
+  delay(1000);
+
+  Serial.println("Rover Ready...");
+}
+
+void loop() {
+  int front = getDistance();
+  Serial.print("Front Distance: ");
+  Serial.println(front);
+
+
+  if (front > 20) {
+    forward();
+  } else {
+    stopBot();
+    delay(300);
+
+    // Scan Left
+    myservo.write(160);
+    delay(400);
+    int leftDist = getDistance();
+
+    // Scan Right
+    myservo.write(20);
+    delay(400);
+    int rightDist = getDistance();
+
+    // Middle Again
+    myservo.write(90);
+
+    if (leftDist > rightDist)
+      leftTurn();
+    else
+      rightTurn();
+
+    delay(500);
+  }
+
+  if (BLE.available()) {
+    String cmd = BLE.readString();
+
+    if (cmd == "STOP")
+      stopBot();
+
+    if (cmd == "FORWARD")
+      forward();
+
+    if (cmd == "LEFT")
+      leftTurn();
+
+    if (cmd == "RIGHT")
+      rightTurn();
+
+    if (cmd == "BACK")
+      backward();
+  }
+}
