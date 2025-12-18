@@ -1,0 +1,13 @@
+int maxSubArray(int nums[], int n) {
+ int currentsum=nums[0];
+ int maxsum=nums[0];
+ for(int i=1; i<n; i++){
+    if(currentsum < 0)
+            currentsum = nums[i];
+    else
+            currentsum = currentsum + nums[i];
+    if(currentsum > maxsum)
+        maxsum = currentsum;
+    }
+    return maxsum;
+}
